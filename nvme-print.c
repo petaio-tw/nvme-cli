@@ -3826,6 +3826,35 @@ static void json_nvme_id_ctrl_nvm(struct nvme_id_ctrl_nvm *ctrl_nvm)
 	json_free_object(root);
 }
 
+static void json_nvme_id_ctrl_cp(struct nvme_id_ctrl_cp *ctrl_cp)
+{
+	struct json_object *root, *ptds;
+
+	root = json_create_object();
+	json_object_add_value_uint(root, "numrec", ctrl_cp->numrec);
+	json_object_add_value_uint(root, "maxmemr", ctrl_cp->maxmemr);
+	json_object_add_value_uint(root, "maxmemrs", ctrl_cp->maxmemrs);
+	json_object_add_value_uint(root, "mrg", ctrl_cp->mrg);
+
+	ptds = json_create_array();
+	json_object_add_value_array(root, "ptds", ptds);
+
+	for (int i = 0; i <= ctrl_cp->numrec; i++) {
+		struct json_object *ptd = json_create_object();
+		
+		json_object_add_value_uint(ptd, "ptype", ctrl_cp->ptd[i].ptype);
+		json_object_add_value_uint(ptd, "maxps", ctrl_cp->ptd[i].maxps);
+		json_object_add_value_uint(ptd, "maxpb", ctrl_cp->ptd[i].maxpb);
+
+		json_array_add_value_object(ptds, ptd);
+	}
+
+
+	json_print_object(root, NULL);
+	printf("\n");
+	json_free_object(root);
+}
+
 void nvme_show_id_ctrl_nvm(struct nvme_id_ctrl_nvm *ctrl_nvm,
 	enum nvme_print_flags flags)
 {
@@ -3841,6 +3870,28 @@ void nvme_show_id_ctrl_nvm(struct nvme_id_ctrl_nvm *ctrl_nvm,
 	printf("dmrl   : %u\n", ctrl_nvm->dmrl);
 	printf("dmrsl  : %u\n", le32_to_cpu(ctrl_nvm->dmrsl));
 	printf("dmsl   : %"PRIu64"\n", le64_to_cpu(ctrl_nvm->dmsl));
+}
+
+void nvme_show_id_ctrl_cp(struct nvme_id_ctrl_cp *ctrl_cp,
+	enum nvme_print_flags flags)
+{
+	if (flags & BINARY)
+		return d_raw((unsigned char *)ctrl_cp, sizeof(*ctrl_cp));
+	else if (flags & JSON)
+		return json_nvme_id_ctrl_cp(ctrl_cp);
+
+	int i;
+	printf("NVMe Identify Controller Computational Programs:\n");
+	printf("numrec    : %u\n", ctrl_cp->numrec);
+	printf("maxmemr   : %u\n", ctrl_cp->maxmemr);
+	printf("maxmemrs  : %u\n", ctrl_cp->maxmemrs);
+	printf("dmrgmrl   : %u\n", ctrl_cp->mrg);
+	for (i = 0; i < ctrl_cp->numrec; i++) {
+		printf("ptd[%d]\n", i);
+		printf("  ptype   : %u\n", ctrl_cp->ptd[i].ptype);
+		printf("  maxps   : %llu\n", ctrl_cp->ptd[i].maxps);
+		printf("  maxpb   : %llu\n", ctrl_cp->ptd[i].maxpb);
+	}
 }
 
 static void json_nvme_zns_id_ctrl(struct nvme_zns_id_ctrl *ctrl)

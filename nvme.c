@@ -1966,6 +1966,50 @@ ret:
 	return nvme_status_to_errno(err, false);
 }
 
+static int cp_id_ctrl(int argc, char **argv, struct command *cmd,
+	struct plugin *plugin)
+{
+	const char *desc = "Send an Identify Controller Computational Programs Command Set "\
+		"command to the given device and report information about "\
+		"the specified controller in various formats.";
+	enum nvme_print_flags flags;
+	struct nvme_id_ctrl_cp ctrl_cp;
+	int fd, err = -1;
+
+	struct config {
+		char *output_format;
+	};
+
+	struct config cfg = {
+		.output_format = "normal",
+	};
+
+	OPT_ARGS(opts) = {
+		OPT_FMT("output-format", 'o', &cfg.output_format,  output_format),
+		OPT_END()
+	};
+
+	fd = parse_and_open(argc, argv, desc, opts);
+	if (fd < 0)
+		goto ret;
+
+	err = flags = validate_output_format(cfg.output_format);
+	if (flags < 0)
+		goto close_fd;
+
+	err = nvme_cp_identify_ctrl(fd, &ctrl_cp);
+	if (!err)
+		nvme_show_id_ctrl_cp(&ctrl_cp, flags);
+	else if (err > 0)
+		nvme_show_status(err);
+	else
+		perror("cp identify controller");
+close_fd:
+	close(fd);
+ret:
+	return nvme_status_to_errno(err, false);
+}
+
 static int ns_descs(int argc, char **argv, struct command *cmd, struct plugin *plugin)
 {
 	const char *desc = "Send Namespace Identification Descriptors command to the "\
