@@ -5504,6 +5504,90 @@ static int rpmb_cmd(int argc, char **argv, struct command *cmd, struct plugin *p
 	return rpmb_cmd_option(argc, argv, cmd, plugin);
 }
 
+static int execute_program(int argc, char **argv, struct command *cmd, struct plugin *plugin)
+{
+	const char *desc = "computational programs : execute program command";
+	const char *namespace_id = "identifier of desired namespace";
+	const char *program_id = "identifier of execute program";
+	const char *ce_id = "identifier of compute engine";
+	const char *rs_id = "identifier of memory range set";
+	int err, fd;
+	void *data = NULL;
+	void *cparam = NULL;
+
+	struct config {
+		__u32 namespace_id;
+		__u32 program_id;
+		__u32 ce_id;
+		__u32 rs_id;
+	};
+
+	struct config cfg = {
+		.namespace_id = 0,
+		.program_id = 0,
+		.ce_id = 0,
+		.rs_id = 0,
+	};
+
+	OPT_ARGS(opts) = {
+		OPT_UINT("namespace-id", 'n', &cfg.namespace_id, namespace_id),
+		OPT_UINT("program-id", 'p', &cfg.program_id, program_id),
+		OPT_UINT("ce-id", 'c', &cfg.ce_id, ce_id),
+		OPT_UINT("rs-id", 'r', &cfg.rs_id, rs_id),
+		OPT_END()
+	};
+
+	err = fd = parse_and_open(argc, argv, desc, opts);
+	if (fd < 0)
+		goto ret;
+
+	if (!cfg.namespace_id) {
+		err = nvme_get_nsid(fd, &cfg.namespace_id);
+		if (err < 0) {
+			perror("get-namespace-id\n");
+			goto close_fd;
+		}
+	}
+#if 1 // fake buffer, TBD
+	data = malloc(512);
+	if (!data)
+	{
+		perror("alloc data buffer fail\n");
+		err = -ENOMEM;
+		goto close_fd;
+	}
+#endif
+	cparam = malloc(sizeof(__u32) * 6);
+	if (!cparam)
+	{
+		perror("alloc cparam buffer fail\n");
+		err = -ENOMEM;
+		goto close_fd;
+	}
+
+	err = nvme_execute_program(fd, cfg.namespace_id, cfg.program_id, cfg.ce_id, cfg.rs_id, data, cparam);
+	if (err < 0)
+		perror("execute program");
+	else if (err != 0)
+		nvme_show_status(err);
+	else
+		printf("NVMe execute program: success\n");
+		
+close_fd:
+	close(fd);
+ret:
+	if (data)
+	{
+		free(data);
+	}
+	if (cparam)
+	{
+		free(cparam);
+	}
+	nvme_show_status(err);
+	return nvme_status_to_errno(err, false);
+}
+
 static int passthru(int argc, char **argv, bool admin,
 		const char *desc, struct command *cmd)
 {

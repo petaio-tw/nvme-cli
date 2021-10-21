@@ -86,6 +86,7 @@ COMMAND_LIST(
 	ENTRY("dir-send", "Submit a Directive Send command, return results", dir_send)
 	ENTRY("virt-mgmt", "Manage Flexible Resources between Primary and Secondary Controller ", virtual_mgmt)
 	ENTRY("rpmb", "Replay Protection Memory Block commands", rpmb_cmd)
+	ENTRY("execute-program", "computational program execute program", execute_program)
 );
 
 #endif
